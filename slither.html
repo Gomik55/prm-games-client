@@ -71,19 +71,6 @@
   }
   #minimap { width: 100%; height: 100%; background: #fffaf0; display:block; }
 
-  #boostBtn {
-    position: fixed; z-index: 8; display: none;
-    width: 84px; height: 84px; border-radius: 50%;
-    bottom: 100px; right: 24px;
-    background: radial-gradient(circle at 35% 30%, #ffe27a, #ffce3d);
-    border: 4px solid #1a1a1a; box-shadow: 4px 4px 0 #1a1a1a;
-    font-family: 'Bangers', cursive; font-size: 15px; color: #1a1a1a;
-    align-items: center; justify-content: center;
-    user-select: none;
-  }
-  #boostBtn.active { background: radial-gradient(circle at 35% 30%, #ff8a3d, #e8482c); color: #fff; transform: scale(0.92); }
-
-  /* chat */
   #chatWrap {
     position: fixed; bottom: 16px; left: 200px; z-index: 6;
     width: 240px; display: none; flex-direction: column; gap: 4px;
@@ -203,8 +190,6 @@
 
 <div id="minimapWrap" class="panel"><canvas id="minimap"></canvas></div>
 
-<div id="boostBtn">BOOST</div>
-
 <div id="chatWrap">
   <div id="chatLog"></div>
   <div id="chatHint">Press ENTER to chat</div>
@@ -226,7 +211,7 @@
     <div id="setupMsg"></div>
     <div class="hint">
       <b>PC:</b> mouse to steer · hold <b>LEFT CLICK</b> or <b>SPACE</b> to boost<br>
-      <b>Mobile:</b> drag to steer · second finger or BOOST button to boost<br>
+      <b>Mobile:</b> drag to steer · second finger anywhere on screen to boost<br>
       <b>ENTER</b> = chat · <b>ESC</b> = menu (game keeps running)
     </div>
   </div>
@@ -273,7 +258,6 @@ window.addEventListener("resize", resize);
 resize();
 
 const DEFAULT_SERVER = "wss://prm-games-servers-1.onrender.com";
-const isTouchDevice = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
 let WORLD_RADIUS = 3000;
 let pointer = { x: window.innerWidth/2, y: window.innerHeight/2 };
@@ -543,7 +527,6 @@ function connect(serverUrl, nickname) {
       document.getElementById("leaderboard").style.display = "block";
       document.getElementById("minimapWrap").style.display = "block";
       document.getElementById("chatWrap").style.display = "flex";
-      if (isTouchDevice) document.getElementById("boostBtn").style.display = "flex";
       running = true; paused = false;
       btn.disabled = false;
     } else if (msg.t === "orbInit") {
@@ -565,7 +548,6 @@ function connect(serverUrl, nickname) {
       document.getElementById("leaderboard").style.display = "none";
       document.getElementById("minimapWrap").style.display = "none";
       document.getElementById("chatWrap").style.display = "none";
-      document.getElementById("boostBtn").style.display = "none";
     } else if (msg.t === "chat") {
       addChatLine(msg.name, msg.msg);
     }
@@ -691,7 +673,6 @@ document.getElementById("exitBtn").addEventListener("click", () => {
   document.getElementById("leaderboard").style.display = "none";
   document.getElementById("minimapWrap").style.display = "none";
   document.getElementById("chatWrap").style.display = "none";
-  document.getElementById("boostBtn").style.display = "none";
   window.location.href = "index.html";
 });
 document.getElementById("backToHubBtn").addEventListener("click", () => { window.location.href = "index.html"; });
@@ -724,12 +705,6 @@ canvas.addEventListener("touchmove", e => {
 canvas.addEventListener("touchend", e => {
   if (e.touches.length < 2) sendBoost(false);
 }, {passive:true});
-
-const boostBtnEl = document.getElementById("boostBtn");
-boostBtnEl.addEventListener("touchstart", e => { e.preventDefault(); boostBtnEl.classList.add("active"); sendBoost(true); }, {passive:false});
-boostBtnEl.addEventListener("touchend", e => { e.preventDefault(); boostBtnEl.classList.remove("active"); sendBoost(false); }, {passive:false});
-boostBtnEl.addEventListener("mousedown", () => { boostBtnEl.classList.add("active"); sendBoost(true); });
-boostBtnEl.addEventListener("mouseup", () => { boostBtnEl.classList.remove("active"); sendBoost(false); });
 
 window.addEventListener("keydown", e => {
   const activeTag = document.activeElement && document.activeElement.tagName;
@@ -779,18 +754,58 @@ function worldToScreen(x,y) {
   return { x: (x-camera.x)*camera.scale + canvas.width/2, y: (y-camera.y)*camera.scale + canvas.height/2 };
 }
 let halftonePattern = null;
+let halftonePatternOutside = null;
 function buildHalftonePattern() {
   const pc = document.createElement("canvas"); pc.width=28; pc.height=28;
   const pctx = pc.getContext("2d");
-  pctx.fillStyle = "#eaf6ec"; pctx.fillRect(0,0,28,28);
-  pctx.fillStyle = "rgba(20,16,10,0.06)";
-  pctx.beginPath(); pctx.arc(7,7,3.4,0,Math.PI*2); pctx.fill();
-  pctx.beginPath(); pctx.arc(21,21,3.4,0,Math.PI*2); pctx.fill();
+  pctx.fillStyle = "#fbfff4"; pctx.fillRect(0,0,28,28);
+  pctx.fillStyle = "rgba(20,16,10,0.09)";
+  pctx.beginPath(); pctx.arc(7,7,3.6,0,Math.PI*2); pctx.fill();
+  pctx.beginPath(); pctx.arc(21,21,3.6,0,Math.PI*2); pctx.fill();
   halftonePattern = ctx.createPattern(pc, "repeat");
+
+  const pc2 = document.createElement("canvas"); pc2.width=28; pc2.height=28;
+  const pctx2 = pc2.getContext("2d");
+  pctx2.fillStyle = "#dfe6cf"; pctx2.fillRect(0,0,28,28);
+  pctx2.fillStyle = "rgba(20,16,10,0.07)";
+  pctx2.beginPath(); pctx2.arc(7,7,3.4,0,Math.PI*2); pctx2.fill();
+  pctx2.beginPath(); pctx2.arc(21,21,3.4,0,Math.PI*2); pctx2.fill();
+  halftonePatternOutside = ctx.createPattern(pc2, "repeat");
 }
-function drawArena() {
+
+/* ambient drifting background bubbles - purely decorative, distinct from real orbs */
+let ambientBubbles = [];
+function initAmbientBubbles() {
+  ambientBubbles = [];
+  const colors = ["rgba(255,206,61,0.18)","rgba(43,111,224,0.15)","rgba(63,174,92,0.15)","rgba(232,72,44,0.13)"];
+  for (let i=0;i<40;i++) {
+    const a = rand(0, Math.PI*2), r = rand(0, WORLD_RADIUS*1.1);
+    ambientBubbles.push({
+      x: Math.cos(a)*r, y: Math.sin(a)*r,
+      vx: rand(-0.15,0.15), vy: rand(-0.15,0.15),
+      size: rand(10,34), color: colors[Math.floor(Math.random()*colors.length)],
+      phase: rand(0,Math.PI*2)
+    });
+  }
+}
+function drawAmbientBubbles(t) {
+  if (ambientBubbles.length === 0) initAmbientBubbles();
+  for (const b of ambientBubbles) {
+    b.x += b.vx; b.y += b.vy;
+    if (Math.hypot(b.x,b.y) > WORLD_RADIUS*1.15) { b.x *= -0.95; b.y *= -0.95; }
+    const s = worldToScreen(b.x, b.y);
+    if (s.x<-50||s.x>canvas.width+50||s.y<-50||s.y>canvas.height+50) continue;
+    const pulse = 1 + Math.sin(t*0.0006 + b.phase)*0.15;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, b.size*camera.scale*pulse, 0, Math.PI*2);
+    ctx.fillStyle = b.color;
+    ctx.fill();
+  }
+}
+
+function drawArena(t) {
   if (!halftonePattern) buildHalftonePattern();
-  ctx.fillStyle = halftonePattern || "#eaf6ec";
+  ctx.fillStyle = halftonePatternOutside || "#dfe6cf";
   ctx.fillRect(0,0,canvas.width, canvas.height);
 
   const c = worldToScreen(0,0);
@@ -798,8 +813,26 @@ function drawArena() {
   ctx.save();
   ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI*2);
   ctx.clip();
-  ctx.fillStyle = "#fbfff4"; ctx.fillRect(c.x-r, c.y-r, r*2, r*2);
+  ctx.fillStyle = halftonePattern || "#fbfff4";
+  ctx.fillRect(c.x-r, c.y-r, r*2, r*2);
+
+  // faint grid for depth/scale cues, matches Kogar's visual language
+  ctx.strokeStyle = "rgba(20,16,10,0.05)"; ctx.lineWidth = 1;
+  const gridSize = 70 * camera.scale;
+  const offsetX = ((c.x) % gridSize + gridSize) % gridSize;
+  const offsetY = ((c.y) % gridSize + gridSize) % gridSize;
+  for (let x=offsetX; x<canvas.width; x+=gridSize) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+  for (let y=offsetY; y<canvas.height; y+=gridSize) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+
+  drawAmbientBubbles(t);
   ctx.restore();
+
+  // soft vignette for depth
+  const vg = ctx.createRadialGradient(canvas.width/2,canvas.height/2, canvas.height*0.25, canvas.width/2,canvas.height/2, canvas.height*0.75);
+  vg.addColorStop(0, "rgba(0,0,0,0)");
+  vg.addColorStop(1, "rgba(20,16,10,0.10)");
+  ctx.fillStyle = vg;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
   ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI*2);
   ctx.lineWidth = 8; ctx.strokeStyle = "#1a1a1a"; ctx.stroke();
@@ -938,7 +971,7 @@ let lastTime = performance.now();
 function loop(t) {
   const dt = Math.min(50, t-lastTime); lastTime = t;
   const activeGameplay = running && !paused;
-  customCursor.style.display = (activeGameplay && !isTouchDevice) ? "block" : "none";
+  customCursor.style.display = activeGameplay ? "block" : "none";
 
   if (running) {
     updateParticles(dt);
@@ -962,7 +995,7 @@ function loop(t) {
     ctx.save();
     ctx.translate(shakeX, shakeY);
 
-    drawArena();
+    drawArena(t);
     drawOrbs(t);
     const sorted = [...snakesList].sort((a,b)=>a.mass-b.mass);
     for (const s of sorted) drawSnake(s, t);
